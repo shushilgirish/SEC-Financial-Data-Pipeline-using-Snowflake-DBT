@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: dim_filings
+    description: "A model to create filings dimension"
+    columns:
+      - name: FILINGS_SK
+        description: "Surrogate key for the filings"
+        tests:
+          - unique
+          - not_null
+      - name: TAG
+        description: "Tag related to the filings"
+        tests:
+          - not_null
+          - unique
+      - name: VERSION
+        description: "Version related to the filings"
+        tests:
+          - not_null
+      - name: DOC
+        description: "Document associated with the filing"
+        tests:
+          - not_null
+      - name: StatementType
+        description: "Statement type for the filing"
+        tests:
+          - not_null
+      - name: UnitOfMeasure
+        description: "Unit of measure for the filing"
+        tests:
+          - not_null
+
+  - name: RAW_TAG_VERSION
+    description: "Model containing foreign key relationship to stg_sub"
+    columns:
+      - name: VERSION_TAG
+        description: "Foreign key relationship to stg_sub"
+        tests:
+          - relationships:
+              to: source('NUM', 'STG_NUM')
+              field: VERSION_TAG
+      - name: VERSION_TAG
+        description: "Foreign key relationship to stg_pre"
+        tests:
+          - relationships:
+              to: source('NUM', 'STG_PRE')
+              field: VERSION_TAG

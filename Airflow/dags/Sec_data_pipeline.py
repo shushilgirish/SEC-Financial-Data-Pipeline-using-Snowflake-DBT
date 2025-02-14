@@ -370,12 +370,17 @@ create_file_format = SnowflakeOperator(
 
     use schema {snowflake_schema_raw_data};
     CREATE OR REPLACE FILE FORMAT tsv_format
-    TYPE = 'CSV'
-    FIELD_DELIMITER = '\t'  -- TAB delimiter
+    TYPE = CSV
+    FIELD_DELIMITER = '\t'
     SKIP_HEADER = 1
-    NULL_IF = ('NULL', 'null', '')
-    EMPTY_FIELD_AS_NULL = TRUE;
+    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+    DATE_FORMAT = 'YYYYMMDD'
+    EMPTY_FIELD_AS_NULL = TRUE
+;
+
+    
     """,
+
     dag=dag
 )
 

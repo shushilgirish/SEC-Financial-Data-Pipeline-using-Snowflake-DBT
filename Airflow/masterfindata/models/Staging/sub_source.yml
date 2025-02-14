@@ -1,0 +1,76 @@
+version: 2
+
+sources:
+  - name: SUB
+    database: DBT_DB
+    schema: DBT_SCHEMA
+    tables:
+      - name: RAW_SUB
+        columns:
+            # writing a few tests here to validate Generic tests
+          - name: ADSH
+            tests:
+              - unique
+              - not_null
+          - name: CIK
+            description: "Central Index Key"
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_be_of_type:
+                  column_type: numeric
+          - name: NAME
+            description: "Company Name"
+            tests:
+              - not_null
+          - name: PERIOD
+            description: "Reporting Period"
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_match_regex:
+                  regex: '^\\d{4}-\\d{2}-\\d{2}$'  # Ensures YYYY-MM-DD format
+          - name: FY
+            description: "Fiscal Year"
+            tests:
+              - dbt_expectations.expect_column_values_to_be_between:
+                  min_value: 1900
+                  max_value: 2100
+          - name: WKSI
+            description: "Well-Known Seasoned Issuer (Boolean)"
+            tests:
+              - accepted_values:
+                  values: [True, False]
+          - name: FILED
+            description: "Date the form was filed"
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_match_regex:
+                  regex: '^\\d{4}-\\d{2}-\\d{2}$'  # Ensures YYYY-MM-DD format
+          - name: ACCEPTED
+            description: "Timestamp when the filing was accepted"
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_be_of_type:
+                  column_type: timestamp_ntz
+          - name: PREVRPT
+            description: "Indicates if the report was previously filed"
+            tests:
+              - accepted_values:
+                  values: [True, False]
+          - name: DETAIL
+            description: "Boolean flag for detail reporting"
+            tests:
+              - accepted_values:
+                  values: [True, False]
+          - name: ACIKS
+            description: "Alternative CIK Identifiers"
+            tests:
+              - dbt_expectations.expect_column_values_to_match_regex:
+                  regex: '^[0-9,]*$'  # Ensures only numbers and commas
+      - name: RAW_NUM
+        columns:
+          - name: ADSH # foreign key check using the test
+            tests:
+              - relationships:
+                  to: source('SUB', 'RAW_SUB')
+                  field: ADSH
+        

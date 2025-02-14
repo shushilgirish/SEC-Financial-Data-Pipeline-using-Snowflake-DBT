@@ -1,0 +1,52 @@
+version: 2
+
+sources:
+  - name: NUM
+    database: DBT_DB
+    schema: DBT_SCHEMA
+    tables:
+      - name: RAW_NUM
+        columns:
+            # writing a few tests here to validate Generic tests
+          - name: ADSH
+            tests:
+              - unique
+              - not_null
+          - name: TAG
+            tests:
+              - not_null
+          - name: VERSION
+            tests:
+              - not_null
+          - name: DDATE
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_match_regex:
+                  regex: '^\\d{4}-\\d{2}-\\d{2}$'  # Ensures YYYY-MM-DD format
+          - name: VALUE
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_be_of_type:
+                  column_type: numeric
+          - name: IS_RESTATED
+            tests:
+              - accepted_values:
+                  values: [True, False]
+          - name: VALUE
+            tests:
+              - dbt_expectations.expect_column_values_to_be_between:
+                  min_value: 0
+                  max_value: 1e9
+      - name: RAW_TAG
+        columns:
+          - name: TAG # foreign key check using the test
+            tests:
+              - relationships:
+                  to: source('NUM', 'RAW_NUM')
+                  field: TAG
+        columns:
+          - name: VERSION # foreign key check using the test
+            tests:
+              - relationships:
+                  to: source('NUM', 'RAW_NUM')
+                  field: VERSION

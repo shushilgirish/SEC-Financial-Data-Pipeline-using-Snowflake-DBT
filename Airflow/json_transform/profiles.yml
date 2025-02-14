@@ -3,12 +3,12 @@ json_transform:
   outputs:
     dev:
       type: snowflake
-      account: "fipbiwy-mj87522"
-      user: "SHUSHIL"
-      password: "Ganesh@1999"
-      role: "sec_role"
-      warehouse: "SEC_WH"
-      database: "SEC_DB"
-      schema: "SEC_SCHEMA"
+      account: fipbiwy-mj87522
+      user: SHUSHIL
+      password: Ganesh@1999
+      role: sec_role
+      warehouse: SEC_WH
+      database: SEC_DB
+      schema: SEC_SCHEMA
       threads: 4
-      client_session_keep_alive: False
+      client_session_keep_alive: false

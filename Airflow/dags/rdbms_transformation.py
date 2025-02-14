@@ -11,14 +11,14 @@ default_args = {
 }
 
 dag = DAG(
-    'json_dbt_transformation',
+    'rdmbs_dbt_transformation',
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
 )
 
 # Define the path to your DBT project
-DBT_PROJECT_DIR = "/opt/airflow/json_transform"
+DBT_PROJECT_DIR = "/opt/airflow/masterfindata"
 
 # Run `dbt debug` to test the connection
 dbt_debug = BashOperator(
