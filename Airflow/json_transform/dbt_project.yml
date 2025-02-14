@@ -35,9 +35,11 @@ models:
     staging:
       +schema: dbt_schema
       +materialized: view
+      +database: dbt_db
       snowflake_warehouse: dbt_WH
     json:
-      +schema: dbt_json_schema
+      +schema: json_schema
       +materialized: table
+      +database: dbt_db
       snowflake_warehouse: dbt_WH
    

@@ -1,3 +1,7 @@
+{{ config(schema='rdbms_schema',
+materialized='view'
+) }}
+
 SELECT 
     ADSH,
     CIK,

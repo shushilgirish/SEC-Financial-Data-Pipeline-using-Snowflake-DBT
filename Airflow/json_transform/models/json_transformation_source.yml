@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: json_transformation
-    database: db_db  # Your Snowflake database
+    database: dbt_db  # Your Snowflake database
     schema: dbt_schema  # Source schema for raw tables
     tables:
       - name: raw_sub

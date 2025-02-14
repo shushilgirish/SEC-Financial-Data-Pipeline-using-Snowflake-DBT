@@ -1,14 +1,14 @@
-json_transform:
+masterfindata:
   target: dev
   outputs:
     dev:
       type: snowflake
-      account: fipbiwy-mj87522
-      user: SHUSHIL
-      password: Ganesh@1999
-      role: dbt_role
-      warehouse: dbt_WH
-      database: dbt_DB
-      schema: dbt_SCHEMA
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      schema: dbt_schema
       threads: 4
       client_session_keep_alive: false

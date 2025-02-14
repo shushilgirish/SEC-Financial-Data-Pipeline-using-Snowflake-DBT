@@ -1,3 +1,7 @@
+{{ config(schema='rdbms_schema',
+materialized='table'
+) }}
+
 SELECT
     {{ dbt_utils.generate_surrogate_key([
         'BAS1', 

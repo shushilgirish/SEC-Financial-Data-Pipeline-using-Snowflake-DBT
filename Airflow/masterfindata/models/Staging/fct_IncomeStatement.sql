@@ -1,5 +1,5 @@
-{{ config(
-    materialized='table'
+{{ config(schema='rdbms_schema',
+materialized='table'
 ) }}
  
 WITH source AS (

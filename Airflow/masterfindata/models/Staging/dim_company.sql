@@ -1,3 +1,7 @@
+{{ config(schema='rdbms_schema',
+materialized='table'
+) }}
+
 select DISTINCT
     {{
         dbt_utils.generate_surrogate_key([

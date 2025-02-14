@@ -25,6 +25,8 @@ x-airflow-common:
     - ./Airflow/plugins:/opt/airflow/plugins
     - ./Airflow/requirements.txt:/opt/airflow/requirements.txt  # Ensures requirements.txt is mounted
     - ./Airflow/json_transform:/opt/airflow/json_transform
+    - ./Airflow/masterfindata:/opt/airflow/masterfindata
+    - ./.env:/opt/airflow/.env 
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     redis:
@@ -58,13 +60,20 @@ services:
         - airflow-webserver
       environment:
         - STREAMLIT_SERVER_ADDRESS=0.0.0.0
-        - STREAMLIT_SERVER_PORT=8501
-        - SNOWFLAKE_USER=my_user
-        - SNOWFLAKE_PASSWORD=my_password
-        - SNOWFLAKE_ACCOUNT=my_account  
+        - STREAMLIT_SERVER_PORT=8501        
+        - SNOWFLAKE_USER=${SNOWFLAKE_USER}
+        - SNOWFLAKE_PASSWORD=${SNOWFLAKE_PASSWORD}
+        - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT}
+        - SNOWFLAKE_ROLE=${SNOWFLAKE_ROLE}
+        - SNOWFLAKE_WAREHOUSE=${SNOWFLAKE_WAREHOUSE}
+        - SNOWFLAKE_DATABASE=${SNOWFLAKE_DATABASE}
+        - SNOWFLAKE_SCHEMA=${SNOWFLAKE_SCHEMA}
+        - API_URL=${API_URL}
+        - AIRFLOW_API_URL=${AIRFLOW_API_URL}
+        - REDIS_HOST=redis
+        - REDIS_PORT=6379
       volumes:
-        - ./Airflow/config:/app/Airflow/config
-        - ./Frontend/:/app/Frontend
+        - ./Frontend:/app
   redis:
     image: redis:7.2-bookworm
     container_name: airflow-redis

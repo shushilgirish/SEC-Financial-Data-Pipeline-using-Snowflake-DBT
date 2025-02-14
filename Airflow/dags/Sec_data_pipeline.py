@@ -35,22 +35,25 @@ with open('/opt/airflow/config/sec_config.json') as config_file:
     config = json.load(config_file)
 
 # S3 Configuration
-AWS_CONN_ID = config['AWS_CONN_ID']
-BUCKET_NAME = config['BUCKET_NAME']
-TEMP_DATA_FOLDER = config['TEMP_DATA_FOLDER']
-S3_BASE_FOLDER = config['S3_BASE_FOLDER']
-snowflake_schema_raw_data = config['snowflake_schema_raw_data']
-snowflake_role = config['snowflake_role']
-SNOWFLAKE_CONN_ID = config['SNOWFLAKE_CONN_ID']
-BASE_URL = config['BASE_URL']
-USER_AGENTS = config['USER_AGENTS']
-DATE = config['date']
-#this is for the snowflake connection to the s3 bucket
 # Fetch AWS credentials from Airflow connection
+AWS_CONN_ID = config['AWS_CONN_ID']
 aws_creds = BaseHook.get_connection(AWS_CONN_ID)
-
+BUCKET_NAME = config['BUCKET_NAME']
 AWS_ACCESS_KEY = aws_creds.login  # AWS Key
 AWS_SECRET_KEY = aws_creds.password  # AWS Secret
+S3_BASE_FOLDER = config['S3_BASE_FOLDER']
+
+TEMP_DATA_FOLDER = config['TEMP_DATA_FOLDER']
+BASE_URL = config['BASE_URL']
+USER_AGENTS = config['USER_AGENTS']
+# Snowflake Configuration
+SNOWFLAKE_CONN_ID = config['SNOWFLAKE_CONN_ID']
+snowflake_conn = BaseHook.get_connection(SNOWFLAKE_CONN_ID)
+snowflake_account = snowflake_conn.extra_dejson.get('account')
+snowflake_role = snowflake_conn.extra_dejson.get('role')
+snowflake_warehouse = snowflake_conn.extra_dejson.get('warehouse')
+snowflake_database = snowflake_conn.extra_dejson.get('database')
+snowflake_schema_raw_data = snowflake_conn.extra_dejson.get('schema')
 # =========================
 # DAG DEFAULT ARGS
 # =========================
@@ -104,15 +107,13 @@ def main_task(**context):
     3) Clicks link to download
     4) Extracts files from ZIP
     """
-    # You can read run_id or dag_run.conf for dynamic year/quarter
-    quarter_str = context["task_instance"].xcom_pull(task_ids="get_quarter")
+    year_quarter = context["dag_run"].conf.get("year_quarter")
 
-    if not quarter_str:
-        raise ValueError("❌ No quarter found.")
+    if not year_quarter:
+        raise ValueError("❌ No year_quarter received from Streamlit!")
 
-    required_zip = f"{quarter_str}.zip"
+    required_zip = f"{year_quarter}.zip"
     print(f"🔍 Required ZIP file: {required_zip}")
-
     os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
     os.makedirs(EXTRACTED_FOLDER, exist_ok=True)
 
@@ -153,7 +154,7 @@ def main_task(**context):
     matching_links = [elem for elem in zip_links if required_zip in elem.get_attribute("href")]
     if not matching_links:
         driver.quit()
-        raise AirflowFailException(f"❌ No ZIP file found for {year}-Q{quarter}.")
+        raise AirflowFailException(f"❌ No ZIP file found for {year_quarter}.")
 
     print(f"✅ Found {len(matching_links)} matching link(s) for {required_zip}.")
 
@@ -192,8 +193,12 @@ def main_task(**context):
             # Remove the downloaded ZIP after extraction
             os.remove(zip_path)
 
-    # Push the extracted folder paths to XCom
+    # Extract the year_quarter part from the folder paths
+    year_quarters = [os.path.basename(folder) for folder in extracted_folders]
+
+    # Push the extracted folder paths and year_quarters to XCom
     context['task_instance'].xcom_push(key='extracted_folders', value=extracted_folders)
+    context['task_instance'].xcom_push(key='year_quarters', value=year_quarters)
 
 def upload_and_cleanup(**context):
     """Uploads all tab-delimited .txt files from temp_data/YYYYqQ folders to S3 and deletes them after upload."""
@@ -202,16 +207,17 @@ def upload_and_cleanup(**context):
         uploaded_files = []
         uploaded_folders = []
 
-        # Pull the extracted folder paths from XCom
+        # Pull the extracted folder paths and year_quarters from XCom
         extracted_folders = context['task_instance'].xcom_pull(task_ids='selenium_scrape_download_extract_upload', key='extracted_folders')
+        year_quarters = context['task_instance'].xcom_pull(task_ids='selenium_scrape_download_extract_upload', key='year_quarters')
 
         if not extracted_folders:
             print("⚠️ No extracted folders found for upload.")
             return
 
-        for folder in extracted_folders:
+        for folder, year_quarter in zip(extracted_folders, year_quarters):
             local_folder_path = folder
-            s3_folder = f"{S3_BASE_FOLDER}/{os.path.basename(folder)}"
+            s3_folder = f"{S3_BASE_FOLDER}/{year_quarter}"
 
             print(f"🚀 Processing folder: {folder}")
 
@@ -258,14 +264,22 @@ test_conn = SnowflakeOperator(
 create_stage = SnowflakeOperator(
     task_id='create_s3_stage',
     snowflake_conn_id=SNOWFLAKE_CONN_ID,
-    sql=f"""
-    USE ROLE {snowflake_role};
-    USE SCHEMA {snowflake_schema_raw_data};
+    sql="""
+    USE ROLE {{ params.snowflake_role }};
+    USE SCHEMA {{ params.snowflake_schema }};
 
-    CREATE STAGE IF NOT EXISTS tsv_s3_stage
-    URL='s3://{BUCKET_NAME}/{S3_BASE_FOLDER}/'
-    CREDENTIALS=(AWS_KEY_ID='{AWS_ACCESS_KEY}', AWS_SECRET_KEY='{AWS_SECRET_KEY}');
+    CREATE or replace STAGE tsv_s3_stage
+    URL='s3://{{ params.bucket_name }}/{{ params.s3_base_folder }}/{{ ti.xcom_pull(task_ids='selenium_scrape_download_extract_upload', key='year_quarters')[0] }}/'
+    CREDENTIALS=(AWS_KEY_ID='{{ params.aws_access_key }}', AWS_SECRET_KEY='{{ params.aws_secret_key }}');
     """,
+    params={
+        "snowflake_role": snowflake_role,
+        "snowflake_schema": snowflake_schema_raw_data,
+        "bucket_name": BUCKET_NAME,
+        "s3_base_folder": S3_BASE_FOLDER,
+        "aws_access_key": AWS_ACCESS_KEY,
+        "aws_secret_key": AWS_SECRET_KEY,
+    },
     dag=dag
 )
 
@@ -375,8 +389,7 @@ create_file_format = SnowflakeOperator(
     SKIP_HEADER = 1
     FIELD_OPTIONALLY_ENCLOSED_BY = '"'
     DATE_FORMAT = 'YYYYMMDD'
-    EMPTY_FIELD_AS_NULL = TRUE
-;
+    EMPTY_FIELD_AS_NULL = TRUE;
 
     
     """,
@@ -385,23 +398,6 @@ create_file_format = SnowflakeOperator(
 )
 
 
-# =========================
-# 7) DEFINE AIRFLOW DAG
-# =========================
-get_quarter_task = SimpleHttpOperator(
-    task_id='get_quarter',
-    http_conn_id='fast_api_service',
-    endpoint='/get_quarter',
-    method='POST',
-    data=json.dumps({"date": DATE}),
-    headers={"Content-Type": "application/json"},
-    retries=5,  # Increase retry attempts
-    retry_delay=timedelta(seconds=10),  # Wait 10s before retrying
-    response_filter=lambda response: response.json().get("year_quarter"),  # ✅ Extract only the quarter value
-    do_xcom_push=True,  # ✅ Ensure XCom push
-    log_response=True,
-    dag=dag,
-)
 
 
 # Single operator for entire process
@@ -416,6 +412,8 @@ upload_task = PythonOperator(
     provide_context=True,
     dag=dag
 )
+	
+
 # Load data into Snowflake tables
 load_to_snowflake = SnowflakeOperator(
     task_id='load_to_snowflake',
@@ -425,37 +423,35 @@ load_to_snowflake = SnowflakeOperator(
     USE SCHEMA {{ params.snowflake_schema }};
 
     COPY INTO {{ params.snowflake_schema }}.RAW_SUB
-    FROM @tsv_s3_stage/{{ ti.xcom_pull(task_ids='get_quarter') }}/
+    FROM @tsv_s3_stage
     PATTERN = '.*sub\.txt'
     FILE_FORMAT = tsv_format
     ON_ERROR = 'CONTINUE';
 
     COPY INTO {{ params.snowflake_schema }}.RAW_NUM
-    FROM @tsv_s3_stage/{{ ti.xcom_pull(task_ids='get_quarter') }}/
+    FROM @tsv_s3_stage
     PATTERN = '.*num\.txt'
     FILE_FORMAT = tsv_format
     ON_ERROR = 'CONTINUE';
 
     COPY INTO {{ params.snowflake_schema }}.RAW_PRE
-    FROM @tsv_s3_stage/{{ ti.xcom_pull(task_ids='get_quarter') }}/
+    FROM @tsv_s3_stage
     PATTERN = '.*pre\.txt'
     FILE_FORMAT = tsv_format
     ON_ERROR = 'CONTINUE';
 
     COPY INTO {{ params.snowflake_schema }}.RAW_TAG
-    FROM @tsv_s3_stage/{{ ti.xcom_pull(task_ids='get_quarter') }}/
+    FROM @tsv_s3_stage
     PATTERN = '.*tag\.txt'
     FILE_FORMAT = tsv_format
     ON_ERROR = 'CONTINUE';
     """,
-    params={  # Pass parameters dynamically, ensuring everything else remains unchanged
+    params={
         "snowflake_role": snowflake_role,
         "snowflake_schema": snowflake_schema_raw_data,
     },
     dag=dag
 )
 
-
-
 # Set task dependencies
-get_quarter_task >> main_operator >> upload_task >> test_conn >> create_tables >> create_file_format >> create_stage >> load_to_snowflake
+main_operator >> upload_task >> test_conn >> create_tables >> create_file_format >> create_stage >> load_to_snowflake

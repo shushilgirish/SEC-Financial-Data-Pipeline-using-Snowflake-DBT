@@ -1,3 +1,6 @@
+{{ config(schema='rdbms_schema',
+materialized='view'
+) }}
 select 
     ADSH,
     TAG,
