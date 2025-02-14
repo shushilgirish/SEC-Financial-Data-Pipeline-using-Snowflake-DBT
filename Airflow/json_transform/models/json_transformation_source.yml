@@ -1,0 +1,128 @@
+version: 2
+
+sources:
+  - name: json_transformation
+    database: sec_db  # Your Snowflake database
+    schema: sec_schema  # Source schema for raw tables
+    tables:
+      - name: raw_sub
+        columns:
+          - name: adsh
+            tests:
+              - unique
+              - not_null
+          - name: cik
+            tests:
+              - not_null
+          - name: name
+            tests:
+              - not_null
+          - name: wksi
+            tests:
+              - not_null
+          - name: form
+            tests:
+              - not_null
+          - name: period
+            tests:
+              - not_null
+          - name: filed
+            tests:
+              - not_null
+          - name: accepted
+            tests:
+              - not_null
+          - name: prevrpt
+            tests:
+              - not_null
+          - name: detail
+            tests:
+              - not_null
+          - name: instance
+            tests:
+              - not_null
+          - name: nciks
+            tests:
+              - not_null
+              
+
+      - name: raw_num
+        columns:
+          - name: adsh
+            tests:
+              - relationships:
+                  to: source('json_transformation', 'raw_sub')
+                  field: adsh
+
+          - name: tag
+            tests:
+              - not_null
+
+          - name: version
+            tests:
+              - not_null
+
+          - name: tag_version
+            tests:
+              - relationships:
+                  to: source('json_transformation', 'raw_tag')
+                  field: 
+                    - tag
+                    - version  # ✅ Correct multi-column reference
+
+
+      - name: raw_tag
+        description: "Stores unique tags along with taxonomy version details."
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns: ["tag", "version"]  # ✅ Must be at the table level
+        columns:
+          - name: tag
+            tests:
+              - not_null
+          - name: version
+            tests:
+              - not_null
+          - name: custom
+            tests:
+              - not_null
+          - name: abstract
+            tests:
+              - not_null
+          - name: iord
+            tests:
+              - not_null
+
+      - name: raw_pre
+        columns:
+          - name: adsh
+            tests:
+              - relationships:
+                  to: source('json_transformation', 'raw_sub')
+                  field: adsh  # ✅ Correctly references raw_sub.adsh
+              - relationships:
+                  to: source('json_transformation', 'raw_num')
+                  field: adsh  # ✅ Also referenced by raw_num.adsh
+
+          - name: tag
+            tests:
+              - not_null
+
+          - name: version
+            tests:
+              - not_null
+
+          - name: tag_version
+            tests:
+              - relationships:
+                  to: source('json_transformation', 'raw_tag')
+                  field: 
+                    - tag
+                    - version  # ✅ Ensures foreign key consistency with raw_tag
+
+              - relationships:
+                  to: source('json_transformation', 'raw_num')
+                  field: 
+                    - adsh
+                    - tag
+                    - version  # ✅ Ensures consistency with raw_num (adsh, tag, version)

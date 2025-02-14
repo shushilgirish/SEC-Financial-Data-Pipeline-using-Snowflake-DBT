@@ -1,6 +1,3 @@
-"""
-This DAG uploads TSV files from local temp_data folder to S3 and then loads them into Snowflake
-"""
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
@@ -108,6 +105,8 @@ create_stage = SnowflakeOperator(
     task_id='create_s3_stage',
     snowflake_conn_id='snowflake_default',
     sql="""
+    use role dbt_role;
+    use schema dbt_schema;
     CREATE STAGE IF NOT EXISTS tsv_s3_stage
     URL='s3://bigdatateam5-pdfreader/sec_raw_data/'
     CREDENTIALS=(AWS_KEY_ID='{{ conn.aws_default.login }}'
@@ -122,6 +121,8 @@ create_tables = SnowflakeOperator(
     snowflake_conn_id='snowflake_default',
     sql=f"""
    -- Table: SUB (Submissions)
+    use role dbt_role;
+    use schema dbt_schema;
 CREATE OR REPLACE TABLE {snowflake_schema_raw_data}.RAW_SUB (
     adsh STRING(20), -- Accession Number
     cik NUMBER(10), -- Central Index Key (CIK)
@@ -211,6 +212,9 @@ create_file_format = SnowflakeOperator(
     task_id='create_file_format',
     snowflake_conn_id='snowflake_default',
     sql="""
+    use role dbt_role;
+
+    use schema dbt_schema;
     CREATE OR REPLACE FILE FORMAT tsv_format
     TYPE = 'CSV'
     FIELD_DELIMITER = '\t'  -- TAB delimiter
@@ -233,7 +237,10 @@ upload_task = PythonOperator(
 load_to_snowflake = SnowflakeOperator(
     task_id='load_to_snowflake',
     snowflake_conn_id='snowflake_default',
-    sql="""
+    sql=f"""
+    use role dbt_role;
+
+    use schema dbt_schema;
     COPY INTO {snowflake_schema_raw_data}.RAW_SUB
     FROM @tsv_s3_stage/2024q4/
     PATTERN = '.*sub\.txt',

@@ -1,20 +1,27 @@
 # Ignore compiled Python files
 __pycache__/
+.pytest_cache/
 *.pyc
 *.pyo
 *.pyd
+chromedriver
+chrome/
 
 # Ignore logs
 logs/
+!Airflow/logs/
+Airflow/logs/*
 *.log
-Airflow/logs/
+# Airflow/logs/
 Airflow/dags/__pycache__/
-Airflow/temp data/
+temp data/
+!Airflow/temp data/
 
 # Ignore environment files
 .env
 *.env
 Airflow/.env
+
 
 # Ignore DBT and Airflow config files
 DBT/dbt_airflow/.gitignore
@@ -23,12 +30,11 @@ DBT/dbt_airflow/Dockerfile
 DBT/dbt_airflow/dags/.airflowignore
 
 # Ignore Airflow configs
-Airflow/config/
-Airflow/docker-compose.yaml
-
+config/
+!Airflow/config/
 # Ignore temporary or large files
 *.csv
 *.json
 *.txt
-*.md
+!requirements.txt
 venv/
