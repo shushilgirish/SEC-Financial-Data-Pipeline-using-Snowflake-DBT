@@ -35,6 +35,7 @@ config/
 # Ignore temporary or large files
 *.csv
 *.json
+!sec_config.json
 *.txt
 !requirements.txt
 venv/
