@@ -1,0 +1,72 @@
+version: 2
+
+sources:
+  - name: TAG
+    database: DBT_DB
+    schema: DBT_SCHEMA
+    tables:
+      - name: RAW_NUM
+        columns:
+            # writing a few tests here to validate Generic tests
+          - name: ADSH
+            tests:
+              - unique
+              - not_null
+          - name: TAG
+            description: "Unique identifier for the tag"
+            tests:
+              - not_null
+          - name: VERSION
+            tests:
+              - not_null
+          - name: CUSTOM
+            description: "Indicates if the tag is custom (Boolean)"
+            tests:
+              - accepted_values:
+                  values: [True, False]
+          - name: ABSTRACT
+            description: "Indicates if the tag is abstract (Boolean)"
+            tests:
+              - accepted_values:
+                  values: [True, False]
+          - name: DATATYPE
+            description: "Defines the data type of the tag"
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_match_regex:
+                  regex: '^(string|integer|boolean|decimal|date|float)$'  # Example: Allowed values
+          - name: IORD
+            description: "Indicates whether it's an instant (I) or duration (D)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['I', 'D']
+          - name: CRDR
+            description: "Indicates if it's a credit (C) or debit (D)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['C', 'D']
+          - name: TLABEL
+            description: "Tag label (human-readable description)"
+            tests:
+              - not_null
+          - name: DOC
+            description: "Detailed documentation for the tag"
+            tests:
+              - dbt_expectations.expect_column_value_lengths_to_be_between:
+                  min_value: 1
+                  max_value: 16777216  # Ensuring it doesn't exceed Snowflake's max VARCHAR length
+      - name: RAW_TAG
+        columns:
+          - name: TAG # foreign key check using the test
+            tests:
+              - relationships:
+                  to: source('NUM', 'RAW_NUM')
+                  field: TAG
+        columns:
+          - name: VERSION # foreign key check using the test
+            tests:
+              - relationships:
+                  to: source('NUM', 'RAW_NUM')
+                  field: VERSION

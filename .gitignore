@@ -1,0 +1,40 @@
+# Ignore compiled Python files
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+chromedriver
+chrome/
+
+# Ignore logs
+logs/
+!Airflow/logs/
+Airflow/logs/*
+*.log
+# Airflow/logs/
+Airflow/dags/__pycache__/
+temp data/
+!Airflow/temp data/
+
+# Ignore environment files
+.env
+*.env
+Airflow/.env
+
+
+# Ignore DBT and Airflow config files
+DBT/dbt_airflow/.gitignore
+DBT/dbt_airflow/.astro/
+DBT/dbt_airflow/Dockerfile
+DBT/dbt_airflow/dags/.airflowignore
+
+# Ignore Airflow configs
+config/
+!Airflow/config/
+# Ignore temporary or large files
+*.csv
+*.json
+*.txt
+!requirements.txt
+venv/

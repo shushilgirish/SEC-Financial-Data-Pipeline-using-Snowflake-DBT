@@ -1,0 +1,60 @@
+version: 2
+
+sources:
+  - name: PRE
+    database: DBT_DB
+    schema: DBT_SCHEMA
+    tables:
+      - name: RAW_PRE
+        description: "Presentation linkbase table"
+        columns:
+          - name: ADSH
+            description: "Unique identifier for the submission"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('SUB', 'RAW_SUB')
+                  field: ADSH
+          - name: REPORT
+            description: "Report number"
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_be_of_type:
+                  column_type: numeric
+          - name: STMT
+            description: "Statement type"
+            tests:
+              - not_null
+          - name: INPTH
+            description: "Indicates if the tag is in the presentation tree"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [True, False]
+          - name: TAG
+            description: "Tag identifier"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('TAG', 'RAW_TAG')
+                  field: TAG
+          - name: VERSION
+            description: "Version of the tag"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('TAG', 'RAW_TAG')
+                  field: VERSION
+          - name: PLABEL
+            description: "Preferred label"
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_value_lengths_to_be_between:
+                  min_value: 1
+                  max_value: 512
+          - name: NEGATING
+            description: "Indicates if the value should be negated"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [True, False]
