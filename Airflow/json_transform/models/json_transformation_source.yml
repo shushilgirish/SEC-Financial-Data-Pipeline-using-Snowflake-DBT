@@ -2,8 +2,8 @@ version: 2
 
 sources:
   - name: json_transformation
-    database: sec_db  # Your Snowflake database
-    schema: sec_schema  # Source schema for raw tables
+    database: db_db  # Your Snowflake database
+    schema: dbt_schema  # Source schema for raw tables
     tables:
       - name: raw_sub
         columns:
