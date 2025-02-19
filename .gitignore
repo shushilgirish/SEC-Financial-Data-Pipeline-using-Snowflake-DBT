@@ -24,6 +24,7 @@ Airflow/.env
 
 
 .user.yml
+package-lock.yml
 # Ignore DBT and Airflow config files
 DBT/dbt_airflow/.gitignore
 DBT/dbt_airflow/.astro/

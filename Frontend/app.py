@@ -5,16 +5,20 @@ import snowflake.connector
 from datetime import datetime
 import time
 import json
+import numpy as np
 import os
+from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 import redis
+load_dotenv()
 # ✅ Streamlit UI
 st.set_page_config(page_title="Quarter Finder & Snowflake Viewer", layout="wide")
 st.sidebar.title("📊 Navigation")
 
 # ✅ Correct FastAPI Endpoint
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")  # Docker service name
-REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+REDIS_HOST = os.getenv("REDIS_HOST")  # Docker service name
+REDIS_PORT = os.getenv("REDIS_PORT")
+print(f"🔍 DEBUG: Redis Host - {REDIS_HOST}, Port - {REDIS_PORT}")
 try:
     redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
     redis_client.ping()  # Quick check to ensure Redis is reachable
@@ -22,7 +26,7 @@ try:
 except Exception as e:
     print(f"❌ Redis connection failed: {e}")
     redis_client = None  # Fallback if Redis isn't available
-client = redis.Redis(host="redis", port=6379, db=0)  # match your config
+client = redis.Redis(host=REDIS_HOST, port=6379, db=0)  # match your config
 client.delete("snowflake_table_list")              # or "table_data:<table_name>"
 # or client.flushall()  # CAREFUL: This removes ALL keys in Redis!
 
@@ -64,14 +68,6 @@ def get_snowflake_connection():
     except Exception as e:
         st.error(f"Error connecting to Snowflake: {e}")
         return None
-# ✅ Placeholder for buttons
-json_button_placeholder = st.empty()
-rdbms_button_placeholder = st.empty()
-# Add buttons inside placeholders (initially disabled)
-with json_button_placeholder.container():
-    json_button = st.button("JSON Transformation", disabled=True)
-with rdbms_button_placeholder.container():
-    rdbms_button = st.button("RDBMS Transformation", disabled=True)
 
 # ✅ Fetch List of Schemas
 def get_schema_list():
@@ -126,13 +122,30 @@ def get_table_list(schema):
             return []
     return []
 
-# ✅ Fetch Data with Filters and Pagination
 def fetch_filtered_data(schema, table_name, offset=0, limit=5000, filters=None):
     """Retrieve filtered data from a table in a specified schema, with Redis cache."""
+    # Convert filters to JSON serializable format
+    def convert_to_serializable(obj):
+        if isinstance(obj, (np.int64, np.int32)):
+            return int(obj)
+        elif isinstance(obj, (np.float64, np.float32)):
+            return float(obj)
+        elif isinstance(obj, pd.Timestamp):
+            return obj.strftime('%Y-%m-%d')
+        return obj
+
+    if filters:
+        filters = {k: convert_to_serializable(v) for k, v in filters.items()}
+
     # 1. Build a unique key for the cache
     redis_key = f"filtered_data:{schema}:{table_name}:{offset}:{limit}:{json.dumps(filters)}"
 
-    # 2. Check if we already have cached data
+    # 2. Clear Redis cache (optional, use with caution)
+    if redis_client:
+        redis_client.flushall()
+        print("✅ Redis cache cleared")
+
+    # 3. Check if we already have cached data
     if redis_client:
         cached_data = redis_client.get(redis_key)
         if cached_data:
@@ -149,7 +162,7 @@ def fetch_filtered_data(schema, table_name, offset=0, limit=5000, filters=None):
                 st.warning(f"⚠️ Cache for '{redis_key}' was invalid, deleted. Re-fetching from Snowflake.")
                 print(f"❌ Error reading cached data: {e}")
 
-    # 3. If no cached data (or we just deleted it), fetch from Snowflake
+    # 4. If no cached data (or we just deleted it), fetch from Snowflake
     try:
         conn = get_snowflake_connection()
         if conn:
@@ -160,14 +173,13 @@ def fetch_filtered_data(schema, table_name, offset=0, limit=5000, filters=None):
             where_clauses = []
             if filters:
                 for column, value in filters.items():
-                    if isinstance(value, tuple):  # Numerical range filter
-                        if column.lower() in ['ddate','filedate','created_dt']:  # Detect date fields
-                            # Convert from timestamp (milliseconds) to YYYY-MM-DD for Snowflake
-                            start_date = pd.to_datetime(value[0], unit='ms').strftime('%Y-%m-%d')
-                            end_date = pd.to_datetime(value[1], unit='ms').strftime('%Y-%m-%d')
+                    if isinstance(value, list) and len(value) == 2:  # Date range filter
+                        if column.lower() in ['ddate', 'filedate', 'created_dt']:  # Detect date fields
+                            start_date = value[0].strftime('%Y-%m-%d')
+                            end_date = value[1].strftime('%Y-%m-%d')
                             where_clauses.append(f'"{column}" BETWEEN \'{start_date}\' AND \'{end_date}\'')
-                        else:
-                            where_clauses.append(f'"{column}" BETWEEN {value[0]} AND {value[1]}')
+                    elif isinstance(value, tuple):  # Numerical range filter
+                        where_clauses.append(f'"{column}" BETWEEN {value[0]} AND {value[1]}')
                     elif value and value != "":  # Categorical selection
                         where_clauses.append(f'"{column}" = \'{value}\'')
             if where_clauses:
@@ -178,7 +190,16 @@ def fetch_filtered_data(schema, table_name, offset=0, limit=5000, filters=None):
             df = pd.read_sql(query, conn)
             conn.close()
 
-            # 4. Store in Redis for next time (set a TTL if desired)
+            # Convert date columns to datetime
+            date_columns = ['ddate', 'filedate', 'created_dt']
+            for col in date_columns:
+                if col in df.columns:
+                    df[col] = pd.to_datetime(df[col])
+
+            # Log the data types of the columns
+            print(df.dtypes)
+
+            # 5. Store in Redis for next time (set a TTL if desired)
             if redis_client:
                 redis_client.set(redis_key, df.to_json(orient="records"), ex=3600)
                 print(f"✅ Cached filtered data in Redis for table: {table_name}")
@@ -187,7 +208,7 @@ def fetch_filtered_data(schema, table_name, offset=0, limit=5000, filters=None):
     except Exception as e:
         st.error(f"❌ Error fetching filtered data: {e}")
         return pd.DataFrame()
-
+    
 # ✅ Fetch Table Data
 def fetch_table_data(table_name, filters=None):
     """Retrieve up to 100 rows from a table in SEC_SCHEMA, with Redis cache."""
@@ -404,6 +425,7 @@ else:
 
 # ✅ Sidebar - Select View
 view_option = st.sidebar.radio("Choose View:", ["Find Quarter", "View Snowflake Tables", "Query Snowflake Table", "Visualizations"])
+
 # ✅ Quarter Finder Feature
 if view_option == "Find Quarter":
     st.title("📆 Quarter Finder API")
@@ -427,6 +449,23 @@ if view_option == "Find Quarter":
         else:
             st.error(f"⚠️ API Error: {response.status_code} - {response.text}")
 
+# ✅ Placeholder for buttons
+json_button_placeholder = st.empty()
+rdbms_button_placeholder = st.empty()
+# Add buttons inside placeholders (initially disabled)
+with json_button_placeholder.container():
+    json_button = st.button("JSON Transformation", disabled=True,key="json_button")
+with rdbms_button_placeholder.container():
+    rdbms_button = st.button("RDBMS Transformation", disabled=True,key="rdbms_button")
+
+
+# ✅ Handle JSON button click
+if json_button:
+    trigger_additional_dag("json_dbt_transformation")  # Replace with your JSON transformation DAG ID
+
+# ✅ Handle RDBMS button click
+if rdbms_button:
+    trigger_additional_dag("rdmbs_dbt_transformation")  # Replace with your RDBMS transformation DAG ID
 
 # ✅ Snowflake Table Viewer Feature with Column Filters
 elif view_option == "View Snowflake Tables" and SNOWFLAKE_SCHEMA:
@@ -440,45 +479,46 @@ elif view_option == "View Snowflake Tables" and SNOWFLAKE_SCHEMA:
             # Fetch FULL data to get filter options
             full_df = fetch_filtered_data(SNOWFLAKE_SCHEMA, selected_table, limit=5000)
 
-            filters = {}
-        if not full_df.empty:
-            st.sidebar.subheader("🎯 Column Filters")
+            if not full_df.empty:
+                st.sidebar.subheader("🎯 Column Filters")
 
-            # Ensure columns are stripped of whitespace and converted to lowercase for consistent filtering
-            excluded_columns = {'cik', 'ein', 'changed','value'}  # Add other unwanted columns here
-            filtered_columns = [
-                col for col in full_df.columns
-                if not (col.lower().strip() in excluded_columns or 
-                        col.lower().strip().endswith(('_sk', '_dt', '_id', '_code')))
-            ]
+                # Ensure columns are stripped of whitespace and converted to lowercase for consistent filtering
+                excluded_columns = {'cik', 'ein', 'changed','value'}  # Add other unwanted columns here
+                filtered_columns = [
+                    col for col in full_df.columns
+                    if not (col.lower().strip() in excluded_columns or 
+                            col.lower().strip().endswith(('_sk', '_dt', '_id', '_code')))
+                ]
 
-            filters = {}
-            for column in filtered_columns:
-                unique_values = full_df[column].dropna().unique()
-                if len(unique_values) < 15:  # Categorical filter
-                    filters[column] = st.sidebar.selectbox(f"Filter {column}", [""] + list(unique_values), key=column)
-                elif pd.api.types.is_numeric_dtype(full_df[column]):  # Numerical range filter
-                    min_val, max_val = int(full_df[column].min()), int(full_df[column].max())
-                    filters[column] = st.sidebar.slider(f"Filter {column}", min_val, max_val, (min_val, max_val), key=column)
-            
-            # Apply button for filters
-            apply_filters = st.sidebar.button("Apply Filters")
+                filters = {}
+                for column in filtered_columns:
+                    unique_values = full_df[column].dropna().unique()
+                    if len(unique_values) < 15:  # Categorical filter
+                        filters[column] = st.sidebar.selectbox(f"Filter {column}", [""] + list(unique_values), key=column)
+                    elif pd.api.types.is_numeric_dtype(full_df[column]):  # Numerical range filter
+                        min_val, max_val = int(full_df[column].min()), int(full_df[column].max())
+                        filters[column] = st.sidebar.slider(f"Filter {column}", min_val, max_val, (min_val, max_val), key=column)
+                    elif pd.api.types.is_datetime64_any_dtype(full_df[column]):  # Date range filter
+                        min_date, max_date = full_df[column].min(), full_df[column].max()
+                        filters[column] = st.sidebar.date_input(f"Filter {column}", [min_date, max_date], key=column)
 
-            # Fetch filtered data only if "Apply Filters" is clicked
-            if apply_filters:
-                filtered_df = fetch_filtered_data(SNOWFLAKE_SCHEMA, selected_table, filters=filters)
+                # Apply button for filters
+                apply_filters = st.sidebar.button("Apply Filters")
 
-                if not filtered_df.empty:
-                    st.subheader(f"📄 Filtered Data from `{selected_table}`")
-                    st.data_editor(filtered_df)  # Efficient DataFrame rendering
-                else:
-                    st.warning("⚠️ No data available with the applied filters.")
-        else:
-            st.warning("⚠️ No data available in the selected table.")
+                # Fetch filtered data only if "Apply Filters" is clicked
+                if apply_filters:
+                    filtered_df = fetch_filtered_data(SNOWFLAKE_SCHEMA, selected_table, filters=filters)
+
+                    if not filtered_df.empty:
+                        st.subheader(f"📄 Filtered Data from `{selected_table}`")
+                        st.data_editor(filtered_df)  # Efficient DataFrame rendering
+                    else:
+                        st.warning("⚠️ No data available with the applied filters.")
+            else:
+                st.warning("⚠️ No data available in the selected table.")
     else:
         st.error("⚠️ No tables found. Check your **database connection** or **permissions**.")
 
-# ✅ Query Execution Feature
 elif view_option == "Query Snowflake Table":
     st.title("📝 Execute Custom SQL Query on Snowflake")
     query = st.text_area("Enter your SQL query (Only SELECT queries allowed)", "SELECT * FROM PUBLIC.SAMPLE_TABLE LIMIT 10")

@@ -5,3 +5,4 @@ snowflake-connector-python
 redis
 matplotlib
 seaborn
+python-dotenv
