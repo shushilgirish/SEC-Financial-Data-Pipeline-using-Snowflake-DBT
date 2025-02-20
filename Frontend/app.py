@@ -49,6 +49,7 @@ SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
 
 print(f"✅ Snowflake Config Loaded: {SNOWFLAKE_ACCOUNT}")
 # ✅ Snowflake Connection Function
+
 def get_snowflake_connection():
     """Establish a secure connection to Snowflake."""
     try:
@@ -298,6 +299,10 @@ def execute_query(query):
         st.error(f"❌ Query Execution Failed: {e}")
         return pd.DataFrame()
 
+# ✅ Placeholder for buttons
+json_button_placeholder = st.empty()
+rdbms_button_placeholder = st.empty()
+
 # ✅ Function to trigger Airflow DAG with year_quarter and check status
 def trigger_airflow_dag(year_quarter):
     dag_id = "selenium_sec_pipeline"  # Replace with your DAG ID
@@ -353,7 +358,7 @@ def trigger_airflow_dag(year_quarter):
         
         if status == "success":
             st.success(f"✅ Pipeline for Quarter {year_quarter} completed successfully!")
-        # ✅ Enable the buttons
+            # ✅ Enable the buttons
             json_button_placeholder.empty()
             rdbms_button_placeholder.empty()
             with json_button_placeholder.container():
@@ -363,8 +368,7 @@ def trigger_airflow_dag(year_quarter):
         else:
             st.error(f"❌ Pipeline for Quarter {year_quarter} failed.")
     else:
-        st.error(f"❌ Failed to trigger pipeline: {response.status_code} - {response.text}")# ✅ Function to trigger additional Airflow DAGs
-
+        st.error(f"❌ Failed to trigger pipeline: {response.status_code} - {response.text}")
 
 # ✅ Function to trigger additional Airflow DAGs
 def trigger_additional_dag(dag_id):
@@ -415,6 +419,23 @@ def trigger_additional_dag(dag_id):
     else:
         st.error(f"❌ Failed to trigger pipeline: {response.status_code} - {response.text}")
 
+# ✅ Placeholder for buttons
+json_button_placeholder = st.empty()
+rdbms_button_placeholder = st.empty()
+# Add buttons inside placeholders (initially disabled)
+with json_button_placeholder.container():
+    json_button = st.button("JSON Transformation", disabled=True, key="json_button")
+with rdbms_button_placeholder.container():
+    rdbms_button = st.button("RDBMS Transformation", disabled=True, key="rdbms_button")
+
+# ✅ Handle JSON button click
+if json_button:
+    trigger_additional_dag("json_dbt_transformation")  # Replace with your JSON transformation DAG ID
+
+# ✅ Handle RDBMS button click
+if rdbms_button:
+    trigger_additional_dag("rdmbs_dbt_transformation")  # Replace with your RDBMS transformation DAG ID
+    
 # ✅ Sidebar - Select Schema
 schemas = get_schema_list()
 if schemas:
@@ -448,24 +469,6 @@ if view_option == "Find Quarter":
             trigger_airflow_dag(year_quarter)
         else:
             st.error(f"⚠️ API Error: {response.status_code} - {response.text}")
-
-# ✅ Placeholder for buttons
-json_button_placeholder = st.empty()
-rdbms_button_placeholder = st.empty()
-# Add buttons inside placeholders (initially disabled)
-with json_button_placeholder.container():
-    json_button = st.button("JSON Transformation", disabled=True,key="json_button")
-with rdbms_button_placeholder.container():
-    rdbms_button = st.button("RDBMS Transformation", disabled=True,key="rdbms_button")
-
-
-# ✅ Handle JSON button click
-if json_button:
-    trigger_additional_dag("json_dbt_transformation")  # Replace with your JSON transformation DAG ID
-
-# ✅ Handle RDBMS button click
-if rdbms_button:
-    trigger_additional_dag("rdmbs_dbt_transformation")  # Replace with your RDBMS transformation DAG ID
 
 # ✅ Snowflake Table Viewer Feature with Column Filters
 elif view_option == "View Snowflake Tables" and SNOWFLAKE_SCHEMA:
