@@ -302,6 +302,11 @@ def execute_query(query):
 # ✅ Placeholder for buttons
 json_button_placeholder = st.empty()
 rdbms_button_placeholder = st.empty()
+# Initialize session state for buttons
+if 'json_button_enabled' not in st.session_state:
+    st.session_state.json_button_enabled = False
+if 'rdbms_button_enabled' not in st.session_state:
+    st.session_state.rdbms_button_enabled = False
 
 # ✅ Function to trigger Airflow DAG with year_quarter and check status
 def trigger_airflow_dag(year_quarter):
@@ -359,14 +364,10 @@ def trigger_airflow_dag(year_quarter):
         if status == "success":
             st.success(f"✅ Pipeline for Quarter {year_quarter} completed successfully!")
             # ✅ Enable the buttons
-            json_button_placeholder.empty()
-            rdbms_button_placeholder.empty()
-            with json_button_placeholder.container():
-                json_button = st.button("JSON Transformation", disabled=False)
-            with rdbms_button_placeholder.container():
-                rdbms_button = st.button("RDBMS Transformation", disabled=False)        
+            st.session_state.json_button_enabled = True
+            st.session_state.rdbms_button_enabled = True
         else:
-            st.error(f"❌ Pipeline for Quarter {year_quarter} failed.")
+            st.error(f"❌ Pipeline for Quarter {year_quarter} failed.")    
     else:
         st.error(f"❌ Failed to trigger pipeline: {response.status_code} - {response.text}")
 
@@ -424,10 +425,9 @@ json_button_placeholder = st.empty()
 rdbms_button_placeholder = st.empty()
 # Add buttons inside placeholders (initially disabled)
 with json_button_placeholder.container():
-    json_button = st.button("JSON Transformation", disabled=True, key="json_button")
+    json_button = st.button("JSON Transformation", disabled=not st.session_state.json_button_enabled, key="json_button")
 with rdbms_button_placeholder.container():
-    rdbms_button = st.button("RDBMS Transformation", disabled=True, key="rdbms_button")
-
+    rdbms_button = st.button("RDBMS Transformation", disabled=not st.session_state.rdbms_button_enabled, key="rdbms_button")
 # ✅ Handle JSON button click
 if json_button:
     trigger_additional_dag("json_dbt_transformation")  # Replace with your JSON transformation DAG ID
