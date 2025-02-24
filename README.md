@@ -1,4 +1,4 @@
-# master-financial-database
+# SEC Financial Data Pipeline using Snowflake & DBT
 
 This repository contains the end-to-end solution for building a master financial statement database for US public companies. The project supports fundamental analysis by using SEC financial statement data sets and encompasses several components including data scraping, storage design, validation, Airflow pipelines for ETL processes, and deployed applications for data access via Streamlit and FastAPI.
 
