@@ -52,6 +52,8 @@ services:
   streamlit:
       build:
         context: ./Frontend  # Points to Frontend's Dockerfile
+        dockerfile: Dockerfile
+      container_name: streamlit
       restart: always
       ports:
         - "8501:8501"
