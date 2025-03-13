@@ -370,10 +370,6 @@ def trigger_airflow_dag(year_quarter):
             st.rerun()
         else:
             st.error(f"❌ Pipeline for Quarter {year_quarter} failed.")    
-            st.session_state.json_button_enabled = True
-            st.session_state.rdbms_button_enabled = True
-            st.rerun()
-
     else:
         st.error(f"❌ Failed to trigger pipeline: {response.status_code} - {response.text}")
 
