@@ -56,7 +56,7 @@ def run_dbt_with_performance(models_selector, **kwargs):
         "--threads", "8",  # Increase thread count for better parallelism
         "--profiles-dir", DBT_PROJECT_DIR
     ]    
-    
+
     process = subprocess.Popen(
         cmd,
         cwd=DBT_PROJECT_DIR,
@@ -77,7 +77,23 @@ def run_dbt_with_performance(models_selector, **kwargs):
 # Operators with Python execution for more control
 dbt_debug = BashOperator(
     task_id='dbt_debug',
-    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} debug --profiles-dir {DBT_PROJECT_DIR}",
+    bash_command=f"""
+        cd {DBT_PROJECT_DIR}
+        echo "DBT Project Dir: $(pwd)"
+        echo "Listing directory contents:"
+        ls -la
+        echo "\nEnvironment variables:"
+        echo "SNOWFLAKE_ACCOUNT: $SNOWFLAKE_ACCOUNT"
+        echo "SNOWFLAKE_USER: $SNOWFLAKE_USER" 
+        echo "SNOWFLAKE_ROLE: $SNOWFLAKE_ROLE"
+        echo "SNOWFLAKE_WAREHOUSE: $SNOWFLAKE_WAREHOUSE"
+        echo "SNOWFLAKE_DATABASE: $SNOWFLAKE_DATABASE" 
+        echo "SNOWFLAKE_SCHEMA: $SNOWFLAKE_SCHEMA"
+        echo "\nProfiles.yml content:"
+        cat profiles.yml
+        echo "\nRunning dbt debug with verbose output:"
+        {DBT_EXECUTABLE} debug --profiles-dir {DBT_PROJECT_DIR} -v
+    """,
     env=dbt_env,
     dag=dag,
 )

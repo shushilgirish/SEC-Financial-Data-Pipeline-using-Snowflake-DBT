@@ -11,4 +11,4 @@ json_transform:
       database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
       schema: dbt_schema
       threads: 4
-      client_session_keep_alive: false
+      client_session_keep_alive: falseairflow@a81279451028:/opt/airflow/json_transform$
