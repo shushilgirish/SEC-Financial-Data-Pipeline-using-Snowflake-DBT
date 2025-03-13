@@ -53,8 +53,9 @@ def run_dbt_with_performance(models_selector, **kwargs):
         "run",
         "--models", models_selector,
         "--vars", '{"optimize_performance": true}',
-        "--threads", "8"  # Increase thread count for better parallelism
-    ]
+        "--threads", "8",  # Increase thread count for better parallelism
+        "--profiles-dir", DBT_PROJECT_DIR
+    ]    
     
     process = subprocess.Popen(
         cmd,
@@ -76,14 +77,14 @@ def run_dbt_with_performance(models_selector, **kwargs):
 # Operators with Python execution for more control
 dbt_debug = BashOperator(
     task_id='dbt_debug',
-    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} debug",
+    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} debug --profiles-dir {DBT_PROJECT_DIR}",
     env=dbt_env,
     dag=dag,
 )
 
 dbt_deps = BashOperator(
     task_id='dbt_deps',
-    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} deps",
+    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} deps --profiles-dir {DBT_PROJECT_DIR}",
     env=dbt_env,
     dag=dag,
 )

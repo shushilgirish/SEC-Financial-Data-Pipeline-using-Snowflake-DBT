@@ -44,7 +44,7 @@ dbt_env = {**snowflake_env_vars}
 # Run `dbt debug` to test the connection
 dbt_debug = BashOperator(
     task_id='dbt_debug',
-    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} debug",
+    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} debug --profiles-dir {DBT_PROJECT_DIR}",
     env=dbt_env,
     dag=dag,
 )
@@ -52,11 +52,10 @@ dbt_debug = BashOperator(
 # Run `dbt run` to execute models
 dbt_run = BashOperator(
     task_id='dbt_run',
-    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} run",
+    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} run --profiles-dir {DBT_PROJECT_DIR}",
     env=dbt_env,
     dag=dag,
 )
-
 # # Run `dbt test` to validate transformations
 # dbt_test = BashOperator(
 #     task_id='dbt_test',
