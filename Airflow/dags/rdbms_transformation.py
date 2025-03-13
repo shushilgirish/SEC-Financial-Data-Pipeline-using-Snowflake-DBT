@@ -92,7 +92,7 @@ dbt_debug = BashOperator(
         echo "\nProfiles.yml content:"
         cat profiles.yml
         echo "\nRunning dbt debug with verbose output:"
-        {DBT_EXECUTABLE} debug --profiles-dir {DBT_PROJECT_DIR} -v
+        {DBT_EXECUTABLE} debug --profiles-dir {DBT_PROJECT_DIR}
     """,
     env=dbt_env,
     dag=dag,
