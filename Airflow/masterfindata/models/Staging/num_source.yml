@@ -28,15 +28,13 @@ sources:
               - not_null
               - dbt_expectations.expect_column_values_to_be_of_type:
                   column_type: numeric
+              - dbt_expectations.expect_column_values_to_be_between:
+                  min_value: 0
+                  max_value: 1e9
           - name: IS_RESTATED
             tests:
               - accepted_values:
                   values: [True, False]
-          - name: VALUE
-            tests:
-              - dbt_expectations.expect_column_values_to_be_between:
-                  min_value: 0
-                  max_value: 1e9
       - name: RAW_TAG
         columns:
           - name: TAG # foreign key check using the test
@@ -44,7 +42,6 @@ sources:
               - relationships:
                   to: source('NUM', 'RAW_NUM')
                   field: TAG
-        columns:
           - name: VERSION # foreign key check using the test
             tests:
               - relationships:

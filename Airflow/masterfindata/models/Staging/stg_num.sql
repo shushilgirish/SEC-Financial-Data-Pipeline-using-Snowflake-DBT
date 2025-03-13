@@ -1,16 +1,22 @@
-{{ config(schema='rdbms_schema',
-materialized='view'
+{{ config(
+    materialized='table',  -- Changed from view to table for better performance
+    schema='rdbms_schema',
+    indexes=[
+        {'columns': ['ADSH', 'TAG'], 'type': 'clustered'},
+        {'columns': ['VERSION_TAG'], 'type': 'regular'}
+    ]
 ) }}
-select 
+
+SELECT 
     ADSH,
     TAG,
     VERSION,
     DDATE,
     QTRS,
     UOM,
-    COALESCE(VALUE, 0) AS VALUE,
+    VALUE,
+    FOOTNOTE,
     CONCAT(VERSION, '-', TAG) AS VERSION_TAG
-from
-    {{ source('NUM', 'RAW_NUM') }}
+FROM 
+    DBT_DB.DBT_SCHEMA.RAW_NUM
 
-        

@@ -64,7 +64,6 @@ sources:
               - relationships:
                   to: source('NUM', 'RAW_NUM')
                   field: TAG
-        columns:
           - name: VERSION # foreign key check using the test
             tests:
               - relationships:

@@ -33,7 +33,6 @@ models:
   json_transform:
     # Config indicated by + and applies to all files under models/example/
     staging:
-      +schema: dbt_schema
       +materialized: view
       +database: dbt_db
       snowflake_warehouse: dbt_WH

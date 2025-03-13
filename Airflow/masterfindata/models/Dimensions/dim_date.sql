@@ -1,5 +1,8 @@
 -- models/dim_date.sql
-{{ config(materialized='table') }}
+{{ config(
+    materialized='view',
+    schema='rdbms_schema'
+) }}
  
 WITH calendar AS (
     SELECT

@@ -1,5 +1,6 @@
-{{ config(schema='rdbms_schema',
-materialized='view'
+{{ config(
+    materialized='view',
+    schema='rdbms_schema'
 ) }}
 
 SELECT 

@@ -419,7 +419,8 @@ load_to_snowflake = SnowflakeOperator(
     task_id='load_to_snowflake',
     snowflake_conn_id=SNOWFLAKE_CONN_ID,  # Use direct reference, no f-string needed
     sql="""
-    USE ROLE {{ params.snowflake_role }};
+    use role {{ params.snowflake_role }};
+    ALTER WAREHOUSE {{ params.snowflake_warehouse }} SET WAREHOUSE_SIZE = XLARGE WAIT_FOR_COMPLETION=TRUE;
     USE SCHEMA {{ params.snowflake_schema }};
 
     COPY INTO {{ params.snowflake_schema }}.RAW_SUB
@@ -445,10 +446,12 @@ load_to_snowflake = SnowflakeOperator(
     PATTERN = '.*tag\.txt'
     FILE_FORMAT = tsv_format
     ON_ERROR = 'CONTINUE';
+    ALTER WAREHOUSE {{ params.snowflake_warehouse }} SET WAREHOUSE_SIZE = XSMALL WAIT_FOR_COMPLETION=TRUE;
     """,
     params={
         "snowflake_role": snowflake_role,
         "snowflake_schema": snowflake_schema_raw_data,
+        "snowflake_warehouse": snowflake_warehouse,
     },
     dag=dag
 )

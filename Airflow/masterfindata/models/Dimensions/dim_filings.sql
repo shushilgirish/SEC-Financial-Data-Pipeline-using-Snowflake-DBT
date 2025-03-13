@@ -1,5 +1,6 @@
-{{ config(schema='rdbms_schema',
-materialized='table'
+{{ config(
+    materialized='view',
+    schema='rdbms_schema'
 ) }}
 
 SELECT DISTINCT
@@ -27,7 +28,7 @@ JOIN
     {{ ref('stg_num') }} AS stg_num
     ON stg_num.VERSION_TAG = stg_tag.VERSION_TAG  
 JOIN
-    {{ ref('stg_sub') }} AS stg_sub  -- Assuming `stg_sub` is needed, else remove this line
+    {{ ref('stg_sub') }} AS stg_sub
     ON stg_sub.ADSH = stg_pre.ADSH
 ORDER BY
     stg_tag.TAG

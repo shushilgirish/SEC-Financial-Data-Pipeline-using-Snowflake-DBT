@@ -1,5 +1,6 @@
-{{ config(schema='rdbms_schema',
-materialized='table'
+{{ config(
+    materialized='view',
+    schema='rdbms_schema'
 ) }}
 
 select DISTINCT
@@ -9,10 +10,10 @@ select DISTINCT
             'Company_Name'
         ])
     }} as Company_SK,
-	STG_SUB.CIK as CIK,
-	STG_SUB.Name as Company_Name,
-	UPPER(SPLIT_PART(Instance, '-', 1)) AS Ticker,
-	dim_address.COMP_ADDRESS_SK as COMP_ADDRESS_SK,
+    STG_SUB.CIK as CIK,
+    STG_SUB.Name as Company_Name,
+    UPPER(SPLIT_PART(Instance, '-', 1)) AS Ticker,
+    dim_address.COMP_ADDRESS_SK as COMP_ADDRESS_SK
 from
     {{ ref('dim_address') }} as dim_address
 join
