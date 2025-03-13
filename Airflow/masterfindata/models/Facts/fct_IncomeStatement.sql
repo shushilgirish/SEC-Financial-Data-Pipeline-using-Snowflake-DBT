@@ -2,7 +2,6 @@
     materialized='table',
     transient=true,
     query_tag='IS_FACT_BUILD',
-    snowflake_warehouse='LARGE_COMPUTE_WH',
     cluster_by=['COMPANY_SK']
 ) }}
 

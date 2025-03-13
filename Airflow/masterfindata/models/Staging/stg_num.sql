@@ -1,10 +1,8 @@
+-- Changed from view to table for better performance
 {{ config(
-    materialized='table',  -- Changed from view to table for better performance
+    materialized='view',  
     schema='rdbms_schema',
-    indexes=[
-        {'columns': ['ADSH', 'TAG'], 'type': 'clustered'},
-        {'columns': ['VERSION_TAG'], 'type': 'regular'}
-    ]
+    cluster_by=['ADSH', 'TAG', 'VERSION_TAG']
 ) }}
 
 SELECT 
