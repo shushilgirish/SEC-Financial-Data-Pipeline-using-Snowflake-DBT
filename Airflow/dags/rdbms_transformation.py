@@ -119,13 +119,12 @@ dbt_run_dimensions = PythonOperator(
     dag=dag,
 )
 
-# Parallel fact table execution with dedicated Python operators
+# Parallel fact table execution without pool restrictions
 dbt_run_balancesheet = PythonOperator(
     task_id='dbt_run_balancesheet',
     python_callable=run_dbt_with_performance,
     op_kwargs={'models_selector': 'Facts.fct_balanceSheet'},
     dag=dag,
-    pool='high_cpu_tasks',  # If you define a resource pool in Airflow
     priority_weight=10  # Higher priority
 )
 
@@ -134,7 +133,6 @@ dbt_run_incomestatement = PythonOperator(
     python_callable=run_dbt_with_performance,
     op_kwargs={'models_selector': 'Facts.fct_IncomeStatement'},
     dag=dag,
-    pool='high_cpu_tasks',
     priority_weight=10
 )
 
@@ -143,7 +141,6 @@ dbt_run_cashflows = PythonOperator(
     python_callable=run_dbt_with_performance,
     op_kwargs={'models_selector': 'Facts.fct_Cashflows'},
     dag=dag,
-    pool='high_cpu_tasks',
     priority_weight=10
 )
 

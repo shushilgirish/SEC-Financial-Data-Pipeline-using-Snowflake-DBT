@@ -3,7 +3,7 @@
   "BUCKET_NAME": "sec-data-stage-bucket",
   "TEMP_DATA_FOLDER": "/opt/airflow/temp_data",
   "S3_BASE_FOLDER": "sec_raw_data",
-  "SNOWFLAKE_CONN_ID": "snowflake_default",
+  "SNOWFLAKE_CONN_ID": "another_snowflake",
   "BASE_URL": "https://www.sec.gov/data-research/sec-markets-data/financial-statement-data-sets",
   "default_args": {
     "owner": "airflow",
