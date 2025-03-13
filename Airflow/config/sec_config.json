@@ -1,6 +1,6 @@
 {
   "AWS_CONN_ID": "aws_default",
-  "BUCKET_NAME": "bigdatateam5-pdfreader",
+  "BUCKET_NAME": "sec-data-stage-bucket",
   "TEMP_DATA_FOLDER": "/opt/airflow/temp_data",
   "S3_BASE_FOLDER": "sec_raw_data",
   "SNOWFLAKE_CONN_ID": "snowflake_default",

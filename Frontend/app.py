@@ -37,6 +37,15 @@ if not API_URL:
     st.error("❌ API_URL environment variable is not set.")
     st.stop()
 
+# ✅ Placeholder for buttons
+json_button_placeholder = st.empty()
+rdbms_button_placeholder = st.empty()
+# Initialize session state for buttons
+if 'json_button_enabled' not in st.session_state:
+    st.session_state.json_button_enabled = False
+if 'rdbms_button_enabled' not in st.session_state:
+    st.session_state.rdbms_button_enabled = False
+
 # ✅ Snowflake Configuration
 SNOWFLAKE_CONN_ID = os.getenv("SNOWFLAKE_CONN_ID")  # This will now come from .env or docker-compose
 SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
@@ -299,14 +308,6 @@ def execute_query(query):
         st.error(f"❌ Query Execution Failed: {e}")
         return pd.DataFrame()
 
-# ✅ Placeholder for buttons
-json_button_placeholder = st.empty()
-rdbms_button_placeholder = st.empty()
-# Initialize session state for buttons
-if 'json_button_enabled' not in st.session_state:
-    st.session_state.json_button_enabled = False
-if 'rdbms_button_enabled' not in st.session_state:
-    st.session_state.rdbms_button_enabled = False
 
 # ✅ Function to trigger Airflow DAG with year_quarter and check status
 def trigger_airflow_dag(year_quarter):
@@ -366,8 +367,13 @@ def trigger_airflow_dag(year_quarter):
             # ✅ Enable the buttons
             st.session_state.json_button_enabled = True
             st.session_state.rdbms_button_enabled = True
+            st.rerun()
         else:
             st.error(f"❌ Pipeline for Quarter {year_quarter} failed.")    
+            st.session_state.json_button_enabled = True
+            st.session_state.rdbms_button_enabled = True
+            st.rerun()
+
     else:
         st.error(f"❌ Failed to trigger pipeline: {response.status_code} - {response.text}")
 
@@ -420,9 +426,6 @@ def trigger_additional_dag(dag_id):
     else:
         st.error(f"❌ Failed to trigger pipeline: {response.status_code} - {response.text}")
 
-# ✅ Placeholder for buttons
-json_button_placeholder = st.empty()
-rdbms_button_placeholder = st.empty()
 # Add buttons inside placeholders (initially disabled)
 with json_button_placeholder.container():
     json_button = st.button("JSON Transformation", disabled=not st.session_state.json_button_enabled, key="json_button")
