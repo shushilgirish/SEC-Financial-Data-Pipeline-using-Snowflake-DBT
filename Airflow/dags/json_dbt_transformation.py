@@ -36,7 +36,7 @@ dag = DAG(
 # Define the path to your DBT project
 DBT_PROJECT_DIR = "/opt/airflow/json_transform"
 # Define the full path to the dbt executable
-DBT_EXECUTABLE = "/home/airflow/.local/bin/dbt"  # Update this path based on the output of `which dbt`
+DBT_EXECUTABLE = "/home/airflow/.local/bin/dbt"
 
 # Define common environment variables for DBT tasks
 dbt_env = {**snowflake_env_vars}

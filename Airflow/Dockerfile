@@ -30,31 +30,22 @@ RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 
     && chmod +x /usr/local/bin/chromedriver \
     && rm /tmp/chromedriver.zip || echo "ChromeDriver installation failed, continuing..."
 
-# Switch to airflow user BEFORE running pip install
+# Copy requirements file with correct permissions
+COPY --chown=airflow:root requirements.txt /tmp/requirements.txt
+
+# Switch to airflow user for Python package installations
 USER airflow
 
-# Upgrade pip, setuptools, and wheel before installing dependencies
-RUN pip install --upgrade pip setuptools wheel
+# Upgrade pip and install packages
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && pip install --no-cache-dir \
+        dbt-core==1.5.7 \
+        dbt-snowflake==1.5.7
 
-# Copy the requirements.txt file into the container
-COPY requirements.txt /tmp/requirements.txt
-
-# Install dependencies from requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
-
-# ✅ Install DBT core and DBT Snowflake explicitly with compatible versions
-RUN pip install --no-cache-dir \
-    dbt-core==1.5.7 \
-    dbt-snowflake==1.5.7 \
-    apache-airflow-providers-snowflake==5.3.1 \
-    snowflake-connector-python==3.9.1 \
-    dbt-bigquery \
-    dbt-postgres \
-    dbt-redshift \
-    dbt-duckdb
-# Switch back to root user temporarily to delete the file
+# Switch back to root (temporarily) to clean up
 USER root
 RUN rm -f /tmp/requirements.txt
 
-# Switch back to airflow user
+# Switch back to airflow user for runtime
 USER airflow
