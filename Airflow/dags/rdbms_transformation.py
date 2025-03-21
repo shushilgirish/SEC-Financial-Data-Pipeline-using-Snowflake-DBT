@@ -146,11 +146,12 @@ dbt_run_cashflows = PythonOperator(
 
 dbt_test = BashOperator(
     task_id='dbt_test',
-    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} test",
+    bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} test --profiles-dir {DBT_PROJECT_DIR}",
     env=dbt_env,
     dag=dag,
 )
 
+# Documentation generation tasks
 dbt_docs_generate = BashOperator(
     task_id='dbt_docs_generate',
     bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} docs generate --profiles-dir {DBT_PROJECT_DIR}",
@@ -163,16 +164,39 @@ copy_docs = BashOperator(
     task_id='copy_docs',
     bash_command=f"""
         cd {DBT_PROJECT_DIR}
-        echo "Documentation generated successfully!"
-        echo "To view the documentation, run: dbt docs serve"
-        echo "Copying documentation files to /opt/airflow/logs/dbt_docs/"
-        mkdir -p /opt/airflow/logs/dbt_docs/
-        cp -r target/* /opt/airflow/logs/dbt_docs/
-        echo "Documentation available at /opt/airflow/logs/dbt_docs/"
+        if [ -d "target" ]; then
+            echo "Documentation generated successfully!"
+            echo "To view the documentation, run: dbt docs serve"
+            echo "Copying documentation files to /opt/airflow/logs/dbt_docs/"
+            mkdir -p /opt/airflow/logs/dbt_docs/
+            cp -r target/* /opt/airflow/logs/dbt_docs/
+            echo "Documentation available at /opt/airflow/logs/dbt_docs/"
+        else
+            echo "Error: target directory not found. Documentation may not have been generated."
+            exit 1
+        fi
     """,
+    env=dbt_env,
     dag=dag,
 )
 
+# Add a task that explains how to view the docs
+view_docs_instructions = BashOperator(
+    task_id='view_docs_instructions',
+    bash_command=f"""
+        echo "==============================================================="
+        echo "DBT Documentation has been generated!"
+        echo ""
+        echo "To view the documentation, run the following commands:"
+        echo "docker exec -it airflow-worker bash"
+        echo "cd {DBT_PROJECT_DIR}"
+        echo "{DBT_EXECUTABLE} docs serve --port 8081"
+        echo ""
+        echo "Then visit http://localhost:8081 in your browser"
+        echo "==============================================================="
+    """,
+    dag=dag,
+)
 
 # Sequential workflow for dependencies
 dbt_debug >> dbt_deps >> dbt_run_staging >> dbt_run_dimensions
@@ -183,4 +207,5 @@ dbt_run_dimensions >> [dbt_run_balancesheet, dbt_run_incomestatement, dbt_run_ca
 # Wait for all fact tables to complete before running tests
 [dbt_run_balancesheet, dbt_run_incomestatement, dbt_run_cashflows] >> dbt_test
 
-dbt_test >> dbt_docs_generate >> copy_docs
+# Documentation generation flow
+dbt_test >> dbt_docs_generate >> copy_docs >> view_docs_instructions
