@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv(dotenv_path='/opt/airflow/.env')
 
-# Access environment variables
+# Access environment variables for Snowflake connection
 snowflake_env_vars = {
     'SNOWFLAKE_ACCOUNT': os.getenv('SNOWFLAKE_ACCOUNT'),
     'SNOWFLAKE_USER': os.getenv('SNOWFLAKE_USER'),
@@ -38,8 +38,11 @@ DBT_PROJECT_DIR = "/opt/airflow/json_transform"
 # Define the full path to the dbt executable
 DBT_EXECUTABLE = "/home/airflow/.local/bin/dbt"
 
-# Define common environment variables for DBT tasks
-dbt_env = {**snowflake_env_vars}
+# Define common environment variables for DBT tasks and include DBT_PROFILES_DIR
+dbt_env = {
+    **snowflake_env_vars,
+    'DBT_PROFILES_DIR': DBT_PROJECT_DIR  # This tells dbt to use the profiles.yml in your project directory
+}
 
 # Run `dbt debug` to test the connection
 dbt_debug = BashOperator(
@@ -57,7 +60,7 @@ dbt_run = BashOperator(
     dag=dag,
 )
 
-# # Run `dbt test` to validate transformations
+# Optional: Run `dbt test` to validate transformations
 # dbt_test = BashOperator(
 #     task_id='dbt_test',
 #     bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_EXECUTABLE} test",
@@ -66,5 +69,5 @@ dbt_run = BashOperator(
 # )
 
 # DAG Execution Order
-dbt_debug >> dbt_run 
+dbt_debug >> dbt_run
 # >> dbt_test
